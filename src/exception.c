@@ -23,7 +23,11 @@ PyObject* PyXmlSec_Error;
 PyObject* PyXmlSec_InternalError;
 PyObject* PyXmlSec_VerificationError;
 
+#if PY_MINOR_VERSION >= 7
+static Py_tss_t PyXmlSec_LastErrorKey;
+#else
 static int PyXmlSec_LastErrorKey = 0;
+#endif
 
 static int PyXmlSec_PrintErrorMessage = 0;
 
@@ -71,16 +75,26 @@ static PyXmlSec_ErrorHolder* PyXmlSec_ExchangeLastError(PyXmlSec_ErrorHolder* e)
     PyXmlSec_ErrorHolder* v;
     int r;
 
-    if (PyXmlSec_LastErrorKey == 0) {
+    #if PY_MINOR_VERSION >= 7
+    if (PyThread_tss_is_created(&PyXmlSec_LastErrorKey) != 0) {
+    #else
+    if (PyXmlSec_LastErrorKey != 0) {
+    #endif
         PYXMLSEC_DEBUG("WARNING: There is no error key.");
         PyXmlSec_ErrorHolderFree(e);
         return NULL;
     }
 
     // get_key_value and set_key_value are gil free
+    #if PY_MINOR_VERSION >= 7
+    v = (PyXmlSec_ErrorHolder*)PyThread_tss_get(&PyXmlSec_LastErrorKey);
+    //PyThread_tss_delete(&PyXmlSec_LastErrorKey);
+    r = PyThread_tss_set(&PyXmlSec_LastErrorKey, (void*)e);
+    #else
     v = (PyXmlSec_ErrorHolder*)PyThread_get_key_value(PyXmlSec_LastErrorKey);
     PyThread_delete_key_value(PyXmlSec_LastErrorKey);
     r = PyThread_set_key_value(PyXmlSec_LastErrorKey, (void*)e);
+    #endif
     PYXMLSEC_DEBUGF("set_key_value returns %d", r);
     return v;
 }
@@ -165,6 +179,16 @@ void PyXmlSecEnableDebugTrace(int v) {
     PyXmlSec_PrintErrorMessage = v;
 }
 
+void PyXmlSec_InstallErrorCallback() {
+    #if PY_MINOR_VERSION >= 7
+    if (PyThread_tss_is_created(&PyXmlSec_LastErrorKey) != 0) {
+    #else
+    if (PyXmlSec_LastErrorKey != 0) {
+    #endif
+        xmlSecErrorsSetCallback(PyXmlSec_ErrorCallback);
+    }
+}
+
 // initializes errors module
 int PyXmlSec_ExceptionsModule_Init(PyObject* package) {
     PyXmlSec_Error = NULL;
@@ -184,10 +208,14 @@ int PyXmlSec_ExceptionsModule_Init(PyObject* package) {
     if (PyModule_AddObject(package, "InternalError", PyXmlSec_InternalError) < 0) goto ON_FAIL;
     if (PyModule_AddObject(package, "VerificationError", PyXmlSec_VerificationError) < 0) goto ON_FAIL;
 
-    PyXmlSec_LastErrorKey = PyThread_create_key();
-    if (PyXmlSec_LastErrorKey != 0) {
-        xmlSecErrorsSetCallback(&PyXmlSec_ErrorCallback);
+    #if PY_MINOR_VERSION >= 7
+    if (PyThread_tss_create(&PyXmlSec_LastErrorKey)) {
+        PyXmlSec_InstallErrorCallback();
     }
+    #else
+    PyXmlSec_LastErrorKey = PyThread_create_key();
+    PyXmlSec_InstallErrorCallback();
+    #endif
 
     return 0;
 
