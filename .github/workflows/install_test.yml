@@ -33,7 +33,7 @@ jobs:
                 printf '1\n' | sudo update-alternatives --config python
 
             - name: Install Python 2 on ubuntu >= 22
-              if: matrix.python-version == '2.7.18' && matrix.os != 'ubuntu-20.04'
+              if: matrix.python-version == '2.7.18' && matrix.os == 'ubuntu-22.04'
               run: |
                 sudo add-apt-repository ppa:deadsnakes/ppa -y
                 sudo apt update
@@ -43,6 +43,27 @@ jobs:
                 printf '1\n' | sudo update-alternatives --config python
                 cd /usr/bin
                 sudo ln -s /usr/bin/pip2 ./pip
+
+            - name: Install Python 2 on ubuntu latest
+              if: matrix.python-version == '2.7.18' && matrix.os == 'ubuntu-24.04'
+              run: |
+                sudo apt update
+                sudo apt install -y build-essential libssl-dev libreadline-dev zlib1g-dev libbz2-dev libsqlite3-dev wget curl
+
+                wget https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz
+                tar -xzf Python-2.7.18.tgz
+                cd Python-2.7.18
+                ./configure --enable-optimizations
+                make -j$(nproc)
+                sudo make altinstall
+                curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
+                sudo python2.7 get-pip.py
+
+                sudo update-alternatives --install /usr/bin/python python /usr/local/bin/python2.7 1
+                sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 2
+                printf '1\n' | sudo update-alternatives --config python
+                cd ..
+                rm -rf Python-2.7.18 Python-2.7.18.tgz get-pip.py
 
             - name: Set up virtual environment
               run: |
