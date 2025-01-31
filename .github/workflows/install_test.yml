@@ -3,7 +3,8 @@ name: 'Check installable'
 on:
   push:
       branches: [ gisce ]
-
+  pull_request:
+      branches: [ gisce ]
 
 jobs:
     check-package-installable:
