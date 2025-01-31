@@ -22,8 +22,8 @@
 PyObject* PyXmlSec_Error;
 PyObject* PyXmlSec_InternalError;
 PyObject* PyXmlSec_VerificationError;
-
-#if PY_MINOR_VERSION >= 7
+//#if PY_MINOR_VERSION >= 7
+#if PY_MINOR_VERSION >= 7 && PY_MAJOR_VERSION > 2
 static Py_tss_t PyXmlSec_LastErrorKey;
 #else
 static int PyXmlSec_LastErrorKey = 0;
@@ -75,7 +75,8 @@ static PyXmlSec_ErrorHolder* PyXmlSec_ExchangeLastError(PyXmlSec_ErrorHolder* e)
     PyXmlSec_ErrorHolder* v;
     int r;
 
-    #if PY_MINOR_VERSION >= 7
+//    #if PY_MINOR_VERSION >= 7
+    #if PY_MINOR_VERSION >= 7 && PY_MAJOR_VERSION > 2
     if (PyThread_tss_is_created(&PyXmlSec_LastErrorKey) == 0) {
     #else
     if (PyXmlSec_LastErrorKey == 0) {
@@ -86,7 +87,8 @@ static PyXmlSec_ErrorHolder* PyXmlSec_ExchangeLastError(PyXmlSec_ErrorHolder* e)
     }
 
     // get_key_value and set_key_value are gil free
-    #if PY_MINOR_VERSION >= 7
+//    #if PY_MINOR_VERSION >= 7
+    #if PY_MINOR_VERSION >= 7 && PY_MAJOR_VERSION > 2
     v = (PyXmlSec_ErrorHolder*)PyThread_tss_get(&PyXmlSec_LastErrorKey);
     //PyThread_tss_delete(&PyXmlSec_LastErrorKey);
     r = PyThread_tss_set(&PyXmlSec_LastErrorKey, (void*)e);
@@ -180,7 +182,8 @@ void PyXmlSecEnableDebugTrace(int v) {
 }
 
 void PyXmlSec_InstallErrorCallback() {
-    #if PY_MINOR_VERSION >= 7
+//    #if PY_MINOR_VERSION >= 7
+    #if PY_MINOR_VERSION >= 7 && PY_MAJOR_VERSION > 2
     if (PyThread_tss_is_created(&PyXmlSec_LastErrorKey) != 0) {
     #else
     if (PyXmlSec_LastErrorKey != 0) {
@@ -208,7 +211,8 @@ int PyXmlSec_ExceptionsModule_Init(PyObject* package) {
     if (PyModule_AddObject(package, "InternalError", PyXmlSec_InternalError) < 0) goto ON_FAIL;
     if (PyModule_AddObject(package, "VerificationError", PyXmlSec_VerificationError) < 0) goto ON_FAIL;
 
-    #if PY_MINOR_VERSION >= 7
+//    #if PY_MINOR_VERSION >= 7
+    #if PY_MINOR_VERSION >= 7 && PY_MAJOR_VERSION > 2
     if (PyThread_tss_create(&PyXmlSec_LastErrorKey) == 0) {
         PyXmlSec_InstallErrorCallback();
     }
